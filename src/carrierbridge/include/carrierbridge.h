@@ -1,14 +1,23 @@
 #pragma once
+#include <string>
+#include <functional>
 
-#ifdef _WIN32
-#define CB_API __declspec(dllexport)
-#else
-#define CB_API
-#endif
+class CBServer {
+public:
+    using MessageCallback = std::function<void(const std::string& from, const std::string& message)>;
 
-extern "C" {
-    CB_API void cb_init();
-    CB_API void cb_shutdown();
-    CB_API void cb_register(const char* username);
-    CB_API void cb_send_message(const char* to, const char* message);
-}
+    CBServer();
+    ~CBServer();
+
+    void init();
+    void shutdown();
+
+    void register_user(const std::string& username);
+    void send_message(const std::string& to, const std::string& message);
+
+    void set_message_callback(MessageCallback cb);
+
+private:
+    struct Impl;
+    Impl* pImpl;
+};
