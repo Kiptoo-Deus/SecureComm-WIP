@@ -87,3 +87,30 @@ void CBServer::shutdown() {
         pImpl->io_thread.join();
     std::cout << "[CarrierBridge] UDP server shutdown\n";
 }
+
+void CBServer::register_user(const std::string& username) {
+    asio::ip::udp::endpoint ep(asio::ip::make_address("127.0.0.1"), pImpl->port);
+    std::string msg = "REGISTER " + username;
+    pImpl->socket.send_to(asio::buffer(msg), ep);
+}
+
+
+void CBServer::send_message(const std::string& to, const std::string& message) {
+    asio::ip::udp::endpoint ep;
+    {
+        std::lock_guard<std::mutex> lock(pImpl->mtx);
+        auto it = pImpl->registry.find(to);
+        if (it != pImpl->registry.end())
+            ep = it->second;
+        else {
+            std::cerr << "[CarrierBridge] User not found: " << to << "\n";
+            return;
+        }
+    }
+    std::string msg = "MESSAGE " + to + " " + message;
+    pImpl->socket.send_to(asio::buffer(msg), ep);
+}
+
+void CBServer::set_message_callback(MessageCallback cb) {
+    pImpl->msg_cb = cb;
+}

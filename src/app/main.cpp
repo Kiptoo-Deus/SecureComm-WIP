@@ -1,49 +1,52 @@
 #include <iostream>
 #include <thread>
 #include <chrono>
-#include "../carrierbridge/core.cpp"
+#include <carrierbridge/include/carrierbridge.h>
 
-#include <asio.hpp>
-#include <iostream>
+
 
 int main() {
     try {
-        asio::io_context io;
+        CBServer server(0);  // 0 = let OS pick a free port
+        server.init();
 
-        asio::ip::tcp::endpoint endpoint(
-            asio::ip::tcp::v4(),
-            8080 // safe test port
-        );
+        std::string my_name;
+        std::cout << "Enter your username: ";
+        std::getline(std::cin, my_name);
 
-        asio::ip::tcp::acceptor acceptor(io);
+        // register on server
+        server.register_user(my_name);
 
-        // Open
-        acceptor.open(endpoint.protocol());
+        // message callback
+        server.set_message_callback([&](const std::string& to, const std::string& msg) {
+            std::cout << "[Message Received] " << to << ": " << msg << "\n";
+            });
 
-        // Allow address reuse
-        acceptor.set_option(asio::socket_base::reuse_address(true));
+        std::cout << "Type messages as: <recipient> <message>\n";
+        std::cout << "Press Ctrl+C to exit.\n";
 
-        // Bind
-        acceptor.bind(endpoint);
+        while (true) {
+            std::string line;
+            std::getline(std::cin, line);
+            if (line.empty()) continue;
 
-        // Listen
-        acceptor.listen();
+            auto space = line.find(' ');
+            if (space == std::string::npos) {
+                std::cout << "Invalid format. Use: <recipient> <message>\n";
+                continue;
+            }
 
-        std::cout << "Server running on port 8080..." << std::endl;
+            std::string recipient = line.substr(0, space);
+            std::string message = line.substr(space + 1);
 
-        asio::ip::tcp::socket socket(io);
-        acceptor.accept(socket);
+            server.send_message(recipient, message);
+        }
 
-        std::cout << "Client connected!" << std::endl;
+        server.shutdown();
     }
-    catch (const std::system_error& e) {
-        std::cerr << "SYSTEM ERROR: " << e.what()
-            << " (code=" << e.code() << ")" << std::endl;
+    catch (std::exception& e) {
+        std::cerr << "[Error] " << e.what() << "\n";
     }
-    catch (const std::exception& e) {
-        std::cerr << "EXCEPTION: " << e.what() << std::endl;
-    }
-
     return 0;
 }
 
