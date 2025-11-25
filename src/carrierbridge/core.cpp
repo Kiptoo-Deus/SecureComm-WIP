@@ -1,9 +1,9 @@
-#include "carrierbridge.h"
 #include <asio.hpp>
 #include <iostream>
 #include <thread>
 #include <unordered_map>
 #include <mutex>
+#include "include/carrierbridge.h"
 
 struct CBServer::Impl {
     asio::io_context io;
@@ -70,7 +70,8 @@ void CBServer::shutdown() {
 }
 
 void CBServer::register_user(const std::string& username) {
-    asio::ip::udp::endpoint ep(asio::ip::address::from_string("127.0.0.1"), 9000);
+    asio::ip::udp::endpoint ep(asio::ip::make_address("127.0.0.1"), 9000);
+
     std::string msg = "REGISTER " + username;
     pImpl->socket.send_to(asio::buffer(msg), ep);
 }
