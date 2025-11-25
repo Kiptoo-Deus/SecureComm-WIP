@@ -1,12 +1,13 @@
 #pragma once
 #include <string>
 #include <functional>
+#include <unordered_map>
 
 class CBServer {
 public:
     using MessageCallback = std::function<void(const std::string& from, const std::string& message)>;
 
-    CBServer();
+    CBServer(unsigned short port = 9000); // bind UDP port
     ~CBServer();
 
     void init();

@@ -10,10 +10,19 @@ int main() {
     cb_register("Joel");
     cb_register("Kiptoo");
 
-    cb_send_message("Kiptoo", "Hello Bob!");
-    cb_send_message("Joel", "Hello Alice!");
+    // callback to print messages
+    CBServer server;
+    server.set_message_callback([](const std::string& to, const std::string& msg) {
+        std::cout << "[Message Received] " << to << ": " << msg << "\n";
+        });
 
-    std::this_thread::sleep_for(std::chrono::seconds(1));
+    // simulate messages
+    cb_send_message("Kiptoo", "Hello Kiptoo!");
+    cb_send_message("Joel", "Hello Joel!");
+
+    std::cout << "Press Enter to exit...\n";
+    std::cin.get();
+
     cb_shutdown();
     return 0;
 }
