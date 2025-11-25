@@ -3,25 +3,47 @@
 #include <chrono>
 #include "../carrierbridge/core.cpp"
 
+#include <asio.hpp>
+#include <iostream>
+
 int main() {
-    cb_init();
+    try {
+        asio::io_context io;
 
-    cb_register("Joel");
-    cb_register("Kiptoo");
+        asio::ip::tcp::endpoint endpoint(
+            asio::ip::tcp::v4(),
+            8080 // safe test port
+        );
 
-    // callback to print messages
-    CBServer server;
-    server.set_message_callback([](const std::string& to, const std::string& msg) {
-        std::cout << "[Message Received] " << to << ": " << msg << "\n";
-        });
+        asio::ip::tcp::acceptor acceptor(io);
 
-    // simulate messages
-    cb_send_message("Kiptoo", "Hello Kiptoo!");
-    cb_send_message("Joel", "Hello Joel!");
+        // Open
+        acceptor.open(endpoint.protocol());
 
-    std::cout << "Press Enter to exit...\n";
-    std::cin.get();
+        // Allow address reuse
+        acceptor.set_option(asio::socket_base::reuse_address(true));
 
-    cb_shutdown();
+        // Bind
+        acceptor.bind(endpoint);
+
+        // Listen
+        acceptor.listen();
+
+        std::cout << "Server running on port 8080..." << std::endl;
+
+        asio::ip::tcp::socket socket(io);
+        acceptor.accept(socket);
+
+        std::cout << "Client connected!" << std::endl;
+    }
+    catch (const std::system_error& e) {
+        std::cerr << "SYSTEM ERROR: " << e.what()
+            << " (code=" << e.code() << ")" << std::endl;
+    }
+    catch (const std::exception& e) {
+        std::cerr << "EXCEPTION: " << e.what() << std::endl;
+    }
+
     return 0;
 }
+
