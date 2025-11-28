@@ -1,0 +1,74 @@
+syntax = "proto3";
+package securecomm.v1;
+
+option go_package = "github.com/you/securecomm/proto;proto";
+option java_package = "com.securecomm.proto";
+option java_multiple_files = true;
+option csharp_namespace = "SecureComm.Proto";
+
+import "google/protobuf/timestamp.proto";
+
+// Common types
+message DeviceInfo {
+  string user_id = 1;        // logical user id
+  string device_id = 2;      // device identifier (UUID)
+  bytes public_key = 3;      // public key bytes 
+  string device_name = 4;    // optional  name
+}
+
+// Simple acknowledgement
+message Ack {
+  bool ok = 1;
+  string message = 2;
+}
+
+// Device registration
+message RegisterDeviceRequest {
+  DeviceInfo device = 1;
+}
+
+message RegisterDeviceResponse {
+  Ack ack = 1;
+}
+
+// Encrypted message envelope
+message EncryptedMessage {
+  string message_id = 1;         // server or client generated id (UUID)
+  string from_user = 2;
+  string from_device = 3;
+  string to_user = 4;
+  string to_device = 5;
+  bytes ciphertext = 6;          // full ciphertext including any MAC
+  bytes metadata = 7;           
+  google.protobuf.Timestamp created_at = 8;
+  int32 ttl_seconds = 9;         // optional TTL
+}
+
+// Send message request/response
+message SendMessageRequest {
+  EncryptedMessage message = 1;
+}
+
+message SendMessageResponse {
+  Ack ack = 1;
+}
+
+// Polling / streaming messages
+message PollRequest {
+  DeviceInfo device = 1;
+  int32 max_messages = 2;
+}
+
+service Relay {
+  // Register a device for a user
+  rpc RegisterDevice(RegisterDeviceRequest) returns (RegisterDeviceResponse);
+
+  // Send an encrypted message to another device/user
+  rpc SendMessage(SendMessageRequest) returns (SendMessageResponse);
+
+  // Server-stream of messages for a device (long-poll / gRPC stream)
+  rpc PollMessages(PollRequest) returns (stream EncryptedMessage);
+
+  // Simple health check
+  rpc Health(google.protobuf.Empty) returns (Ack);
+}
