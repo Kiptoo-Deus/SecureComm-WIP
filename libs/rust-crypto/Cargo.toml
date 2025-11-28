@@ -2,13 +2,9 @@
 name = "securecomm-crypto"
 version = "0.1.0"
 edition = "2021"
-license = "MIT"
-description = "Core cryptographic library for SecureComm (X25519, Ed25519, AEAD)"
-authors = ["SecureComm"]
 
 [dependencies]
 rand_core = "0.6"
-x25519-dalek = "2"
-ed25519-dalek = { version = "2", features = ["rand_core"] }
-chacha20poly1305 = { version = "0.10", features = ["std"] }
-hex = "0.4"
+x25519-dalek = "2.0.0"
+ed25519-dalek = "2.0.0"
+chacha20poly1305 = "0.10"

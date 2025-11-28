@@ -1,59 +1,30 @@
-use rand_core::OsRng;
-use x25519_dalek::{PublicKey as X25519Public, StaticSecret as X25519Secret};
-use ed25519_dalek::{Signature, Signer, Verifier, SigningKey, VerifyingKey};
-use chacha20poly1305::{
-    aead::{Aead, Payload},
-    ChaCha20Poly1305, Key, XNonce
-};
+use chacha20poly1305::{ChaCha20Poly1305, Key, Nonce};
+use chacha20poly1305::aead::{Aead, AeadCore};
+use chacha20poly1305::KeyInit;
 
-/// Generate an X25519 static keypair
-pub fn x25519_generate() -> (X25519Secret, X25519Public) {
-    let secret = X25519Secret::new(OsRng);
+use x25519_dalek::{EphemeralSecret, PublicKey as X25519Public};
+
+use rand_core::OsRng;
+
+pub fn generate_x25519_keypair() -> (EphemeralSecret, X25519Public) {
+    let secret = EphemeralSecret::new(&mut OsRng);
     let public = X25519Public::from(&secret);
     (secret, public)
 }
 
-/// Generate an Ed25519 signing keypair
-pub fn ed25519_generate() -> (SigningKey, VerifyingKey) {
-    let signing = SigningKey::generate(&mut OsRng);
-    let verify = signing.verifying_key();
-    (signing, verify)
-}
-
-/// AEAD encrypt (ChaCha20-Poly1305)
-pub fn aead_encrypt(
-    key: &[u8; 32],
-    nonce: &[u8; 12],
-    plaintext: &[u8],
-    aad: &[u8]
-) -> Vec<u8> {
+pub fn encrypt(key: &[u8; 32], plaintext: &[u8]) -> Result<(Vec<u8>, [u8; 12]), String> {
     let cipher = ChaCha20Poly1305::new(Key::from_slice(key));
-    let nonce = XNonce::from_slice(nonce);
-    cipher
-        .encrypt(nonce, Payload { msg: plaintext, aad })
-        .expect("encryption failure")
+    let nonce = ChaCha20Poly1305::generate_nonce(&mut OsRng);
+    let nonce_arr: [u8; 12] = nonce.clone().into();
+
+    let ciphertext = cipher.encrypt(&nonce, plaintext)
+        .map_err(|e| e.to_string())?;
+
+    Ok((ciphertext, nonce_arr))
 }
 
-/// AEAD decrypt
-pub fn aead_decrypt(
-    key: &[u8; 32],
-    nonce: &[u8; 12],
-    ciphertext: &[u8],
-    aad: &[u8]
-) -> Vec<u8> {
+pub fn decrypt(key: &[u8; 32], nonce: &[u8; 12], ciphertext: &[u8]) -> Result<Vec<u8>, String> {
     let cipher = ChaCha20Poly1305::new(Key::from_slice(key));
-    let nonce = XNonce::from_slice(nonce);
-    cipher
-        .decrypt(nonce, Payload { msg: ciphertext, aad })
-        .expect("decryption failure")
-}
-
-/// Sign a message (Ed25519)
-pub fn sign(signing_key: &SigningKey, msg: &[u8]) -> Signature {
-    signing_key.sign(msg)
-}
-
-/// Verify Ed25519 signature
-pub fn verify(verify_key: &VerifyingKey, msg: &[u8], sig: &Signature) -> bool {
-    verify_key.verify(msg, sig).is_ok()
+    let nonce = Nonce::from_slice(nonce);
+    cipher.decrypt(nonce, ciphertext).map_err(|e| e.to_string())
 }
