@@ -1,3 +1,6 @@
-add_executable(test_core test_core.cpp)
-target_link_libraries(test_core PRIVATE carrierbridge)
-add_test(NAME CoreTests COMMAND test_core)
+add_executable(test_core
+    unit/test_core.cpp
+)
+
+target_link_libraries(test_core PRIVATE libcarb)
+add_test(NAME test_core COMMAND test_core)
