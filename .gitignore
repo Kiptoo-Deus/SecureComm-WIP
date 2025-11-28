@@ -1,18 +1,18 @@
-# Visual Studio
-.vs/
-*.vcxproj.user
-*.suo
-*.pdb
-*.idb
-*.ipch
-*.obj
-*.log
-*.tlog
-*.lastbuildstate
+# Rust
+target/
+*.rs.bk
 
-# CMake
-CMakeFiles/
-CMakeCache.txt
-cmake_install.cmake
-build/
+# Go
+bin/
+*.exe
+
+# Node
+node_modules/
+dist/
+.next/
+*.log
+
+# general
 .DS_Store
+.env
+.env.local
