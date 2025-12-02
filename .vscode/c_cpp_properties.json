@@ -1,0 +1,22 @@
+{
+    "configurations": [
+        {
+            "name": "Mac/Linux/Windows",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/include",
+                "/usr/local/include"
+            ],
+            "defines": [],
+            "compilerPath": "/usr/bin/clang++",    
+            "cStandard": "c17",
+            "cppStandard": "c++17",               
+            "intelliSenseMode": "clang-x64",       
+            "browse": {
+                "path": ["${workspaceFolder}"],
+                "limitSymbolsToIncludedHeaders": true
+            }
+        }
+    ],
+    "version": 4
+}
