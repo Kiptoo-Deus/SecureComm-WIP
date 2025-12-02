@@ -9,6 +9,7 @@
 #include <map>
 
 namespace securecomm {
+
 class Ratchet {
 public:
     Ratchet();
@@ -20,7 +21,7 @@ public:
     // Perform a ratchet step using the remote's DH public key
     void ratchet_step(const std::vector<uint8_t>& remote_dh_public);
 
-    // High-level API now uses Envelope as wire object
+    // High-level API using Envelope
     Envelope encrypt_envelope(const std::vector<uint8_t>& plaintext);
     std::optional<std::vector<uint8_t>> decrypt_envelope(const Envelope& env);
 

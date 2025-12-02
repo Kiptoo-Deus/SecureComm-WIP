@@ -7,7 +7,6 @@
 
 namespace securecomm {
 
-
 class AEAD {
 public:
     AEAD();
@@ -25,4 +24,4 @@ private:
     std::vector<uint8_t> key_;
 };
 
-} 
+} // namespace securecomm
