@@ -1,0 +1,2 @@
+/usr/bin/ar qc liboffline.a CMakeFiles/offline.dir/src/libsecurecomm/src/modules/offline/queue_manager.cpp.o
+/usr/bin/ranlib liboffline.a

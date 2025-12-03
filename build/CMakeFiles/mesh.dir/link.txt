@@ -1,0 +1,2 @@
+/usr/bin/ar qc libmesh.a CMakeFiles/mesh.dir/src/libsecurecomm/src/modules/mesh/mesh_network.cpp.o
+/usr/bin/ranlib libmesh.a

@@ -1,0 +1,1 @@
+/usr/bin/c++  -Wall -Wextra -arch x86_64 -Wl,-search_paths_first -Wl,-headerpad_max_install_names CMakeFiles/crypto_test.dir/src/libsecurecomm/tests/crypto_test.cpp.o CMakeFiles/crypto_test.dir/src/libsecurecomm/src/crypto.cpp.o -o crypto_test  -lsodium

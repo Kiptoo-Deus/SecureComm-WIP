@@ -1,2 +1,10 @@
+/Users/joel/Documents/GitHub/CarrierBridge/build/CMakeFiles/offline.dir
+/Users/joel/Documents/GitHub/CarrierBridge/build/CMakeFiles/mesh.dir
+/Users/joel/Documents/GitHub/CarrierBridge/build/CMakeFiles/enhanced.dir
+/Users/joel/Documents/GitHub/CarrierBridge/build/CMakeFiles/desktop_demo.dir
+/Users/joel/Documents/GitHub/CarrierBridge/build/CMakeFiles/ratchet_test.dir
+/Users/joel/Documents/GitHub/CarrierBridge/build/CMakeFiles/crypto_test.dir
+/Users/joel/Documents/GitHub/CarrierBridge/build/CMakeFiles/two_party_test.dir
+/Users/joel/Documents/GitHub/CarrierBridge/build/CMakeFiles/test.dir
 /Users/joel/Documents/GitHub/CarrierBridge/build/CMakeFiles/edit_cache.dir
 /Users/joel/Documents/GitHub/CarrierBridge/build/CMakeFiles/rebuild_cache.dir
