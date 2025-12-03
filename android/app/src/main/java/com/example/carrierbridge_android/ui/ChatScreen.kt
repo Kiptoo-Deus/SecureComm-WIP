@@ -29,6 +29,9 @@ import com.example.carrierbridge_android.ui.theme.TextPrimary
 import com.example.carrierbridge_android.ui.theme.TextSecondary
 import kotlinx.coroutines.launch
 import android.content.Context
+import android.provider.ContactsContract
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.produceState
 
 // Message states for delivery tracking
 enum class MessageState {
@@ -49,7 +52,9 @@ fun ChatScreen(
     deviceId: String = "alice",
     recipientId: String = "bob",
     carrierClient: CarrierBridgeClient? = null,
-    onRecipientChange: () -> Unit = {}
+    onRecipientChange: () -> Unit = {},
+    readContactsGranted: Boolean = false,
+    onRequestContactsPermission: () -> Unit = {}
 ) {
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -192,8 +197,19 @@ fun ChatScreen(
 
         // Recipient picker dialog
         if (showRecipientPicker) {
+            // Load contacts when permission is granted
+            val context = LocalContext.current
+            val contactsState = produceState(initialValue = emptyList<ContactInfo>(), key1 = readContactsGranted) {
+                if (readContactsGranted) {
+                    value = loadContacts(context)
+                }
+            }
+
             RecipientPickerDialog(
                 currentRecipient = currentRecipient,
+                contacts = contactsState.value,
+                readContactsGranted = readContactsGranted,
+                onRequestContactsPermission = onRequestContactsPermission,
                 onRecipientSelected = { recipient ->
                     currentRecipient = recipient
                     showRecipientPicker = false
@@ -276,38 +292,105 @@ fun MessageBubbleWithState(msg: ChatMessage) {
 @Composable
 fun RecipientPickerDialog(
     currentRecipient: String,
+) {
+    // kept for backward compatibility
+    onRecipientSelected: (String) -> Unit,
+    onDismiss: () -> Unit
+)
+) {
+    // Legacy stub — this compose function is now replaced below by an overload.
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Select Recipient") },
+        text = { Text("No contacts available") },
+        confirmButton = {
+            Button(onClick = onDismiss) { Text("Done") }
+        }
+    )
+}
+
+data class ContactInfo(val id: String, val name: String, val phone: String)
+
+@Composable
+fun RecipientPickerDialog(
+    currentRecipient: String,
+    contacts: List<ContactInfo>,
+    readContactsGranted: Boolean,
+    onRequestContactsPermission: () -> Unit,
     onRecipientSelected: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
-    val recipients = listOf("bob", "charlie", "diana", "eve", "frank")
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Select Recipient") },
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
-                recipients.forEach { recipient ->
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        RadioButton(
-                            selected = recipient == currentRecipient,
-                            onClick = { onRecipientSelected(recipient) }
-                        )
-                        Text(recipient, modifier = Modifier.padding(start = 8.dp))
+                if (!readContactsGranted) {
+                    Text("This app needs access to your contacts to select real recipients.")
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Button(onClick = onRequestContactsPermission) { Text("Grant contacts access") }
+                } else if (contacts.isEmpty()) {
+                    Text("No contacts found on device.")
+                } else {
+                    contacts.forEach { contact ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            val recipientId = contact.phone
+                            RadioButton(
+                                selected = recipientId == currentRecipient,
+                                onClick = { onRecipientSelected(recipientId) }
+                            )
+                            Column(modifier = Modifier.padding(start = 8.dp)) {
+                                Text(contact.name)
+                                Text(contact.phone, style = TextStyle(fontSize = 12.sp), color = TextSecondary)
+                            }
+                        }
                     }
                 }
             }
         },
         confirmButton = {
-            Button(onClick = onDismiss) {
-                Text("Done")
-            }
+            Button(onClick = onDismiss) { Text("Done") }
         }
     )
+}
+
+private fun loadContacts(context: Context): List<ContactInfo> {
+    val resolver = context.contentResolver
+    val uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI
+    val projection = arrayOf(
+        ContactsContract.CommonDataKinds.Phone.CONTACT_ID,
+        ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME,
+        ContactsContract.CommonDataKinds.Phone.NUMBER
+    )
+
+    val results = mutableListOf<ContactInfo>()
+    val seen = mutableSetOf<String>()
+
+    val cursor = resolver.query(uri, projection, null, null, "${ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} ASC")
+    cursor?.use {
+        val idIdx = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.CONTACT_ID)
+        val nameIdx = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME)
+        val numIdx = it.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
+
+        while (it.moveToNext()) {
+            val id = if (idIdx >= 0) it.getString(idIdx) ?: "" else ""
+            val name = if (nameIdx >= 0) it.getString(nameIdx) ?: "" else ""
+            val rawNumber = if (numIdx >= 0) it.getString(numIdx) ?: "" else ""
+            val number = rawNumber.replace(Regex("\\s+"), "")
+
+            if (number.isNotBlank() && number !in seen) {
+                seen.add(number)
+                results.add(ContactInfo(id = id, name = name.ifBlank { number }, phone = number))
+            }
+        }
+    }
+
+    return results
 }
 
 private fun formatTime(ms: Long): String {

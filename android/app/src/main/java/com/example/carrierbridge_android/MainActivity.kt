@@ -25,6 +25,7 @@ class MainActivity : ComponentActivity() {
 
     private var carrierClient: CarrierBridgeClient? = null
     private var smsPermissionGranted = false
+    private var readContactsGranted = false
 
     // SMS permission launcher
     private val smsPermissionLauncher = registerForActivityResult(
@@ -38,6 +39,14 @@ class MainActivity : ComponentActivity() {
         if (smsPermissionGranted && carrierClient != null) {
             carrierClient!!.setSmsEnabled(this, true)
         }
+    }
+
+    // Contacts permission launcher
+    private val contactsPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        readContactsGranted = granted
+        android.util.Log.d(TAG, "Read contacts permission granted: $readContactsGranted")
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,7 +67,9 @@ class MainActivity : ComponentActivity() {
                     ChatScreen(
                         deviceId = "alice",
                         recipientId = "bob",
-                        carrierClient = carrierClient
+                        carrierClient = carrierClient,
+                        readContactsGranted = readContactsGranted,
+                        onRequestContactsPermission = { contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS) }
                     )
                 }
             }
@@ -123,6 +134,21 @@ class MainActivity : ComponentActivity() {
         } else {
             Log.d(TAG, "SMS permissions already granted")
             carrierClient?.setSmsEnabled(this, true)
+        }
+    }
+
+    private fun requestContactsPermissionIfNeeded() {
+        val granted = ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.READ_CONTACTS
+        ) == PackageManager.PERMISSION_GRANTED
+
+        readContactsGranted = granted
+        if (!granted) {
+            Log.d(TAG, "Requesting READ_CONTACTS permission")
+            contactsPermissionLauncher.launch(Manifest.permission.READ_CONTACTS)
+        } else {
+            Log.d(TAG, "Read contacts permission already granted")
         }
     }
 }
