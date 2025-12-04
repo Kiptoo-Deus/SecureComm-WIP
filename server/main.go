@@ -22,7 +22,7 @@ import (
 
 var (
 	addr       = flag.String("addr", ":8080", "HTTP service address")
-	mpesaAPI   = flag.String("mpesa-api", "https:
+	mpesaAPI   = flag.String("mpesa-api", "https://api.sandbox.safaricom.co.ke/mpesa/stkpush/v1/processrequest", "M-Pesa API endpoint")
 	consumerKey = flag.String("consumer-key", "", "M-Pesa consumer key")
 	consumerSecret = flag.String("consumer-secret", "", "M-Pesa consumer secret")
 )
