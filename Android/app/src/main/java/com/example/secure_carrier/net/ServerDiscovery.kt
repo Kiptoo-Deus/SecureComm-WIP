@@ -1,20 +1,21 @@
 package com.example.secure_carrier.net
 
 import android.util.Log
-import java.net.InetAddress
 import java.net.InetSocketAddress
 import java.net.Socket
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executors
 
 object ServerDiscovery {
     private const val TAG = "ServerDiscovery"
     private const val PORT = 8080
-    private const val TIMEOUT_MS = 2000
+    private const val TIMEOUT_MS = 500  // Reduced from 2000
     private var cachedServerUrl: String? = null
+    private val executor = Executors.newFixedThreadPool(16)  // Parallel threads
 
     /**
-     * Discovers the server by scanning the local subnet for an open port 8080.
-     * Scans IPs on the same subnet as the device (e.g., 192.168.0.1 to 192.168.0.255).
-     * Returns the first IP that responds, or null if none found.
+     * Discovers the server by scanning the local subnet for an open port 8080 in parallel.
+     * Returns cached URL if available, otherwise scans and caches the result.
      */
     fun discoverServer(): String? {
         // Return cached URL if available
@@ -34,21 +35,17 @@ object ServerDiscovery {
 
             // Extract subnet (e.g., "192.168.0" from "192.168.0.x")
             val subnet = deviceIp.substringBeforeLast(".")
-            Log.d(TAG, "Scanning subnet: $subnet.0 - $subnet.255")
+            Log.d(TAG, "Scanning subnet: $subnet.0 - $subnet.255 (parallel, 500ms timeout)")
 
-            // Scan subnet for open port 8080
-            for (i in 1..254) {
-                val ipToCheck = "$subnet.$i"
-                if (isServerAvailable(ipToCheck)) {
-                    val url = "http://$ipToCheck:$PORT"
-                    Log.d(TAG, "Server found at: $url")
-                    cachedServerUrl = url
-                    return url
-                }
+            // Scan subnet in parallel for open port 8080
+            val foundUrl = scanSubnetParallel(subnet)
+            if (foundUrl != null) {
+                cachedServerUrl = foundUrl
+                Log.d(TAG, "Server found at: $foundUrl")
+            } else {
+                Log.w(TAG, "No server found on subnet")
             }
-
-            Log.w(TAG, "No server found on subnet")
-            null
+            foundUrl
         } catch (e: Exception) {
             Log.e(TAG, "Error discovering server", e)
             null
@@ -56,14 +53,45 @@ object ServerDiscovery {
     }
 
     /**
-     * Check if server is available at the given IP.
+     * Scan subnet in parallel using thread pool.
+     */
+    private fun scanSubnetParallel(subnet: String): String? {
+        val latch = CountDownLatch(254)
+        var foundUrl: String? = null
+        val lock = Object()
+
+        for (i in 1..254) {
+            executor.submit {
+                try {
+                    val ipToCheck = "$subnet.$i"
+                    if (isServerAvailable(ipToCheck)) {
+                        synchronized(lock) {
+                            if (foundUrl == null) {
+                                foundUrl = "http://$ipToCheck:$PORT"
+                                Log.d(TAG, "Server found at: $foundUrl")
+                            }
+                        }
+                    }
+                } finally {
+                    latch.countDown()
+                }
+            }
+        }
+
+        // Wait up to 10 seconds for scan to complete or early exit if found
+        latch.await()
+        return foundUrl
+    }
+
+    /**
+     * Check if server is available at the given IP (non-blocking with timeout).
      */
     private fun isServerAvailable(ip: String): Boolean {
         return try {
             val socket = Socket()
+            socket.soTimeout = TIMEOUT_MS
             socket.connect(InetSocketAddress(ip, PORT), TIMEOUT_MS)
             socket.close()
-            Log.d(TAG, "Server responding at $ip:$PORT")
             true
         } catch (e: Exception) {
             false

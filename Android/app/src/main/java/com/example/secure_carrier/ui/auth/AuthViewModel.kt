@@ -29,6 +29,14 @@ class AuthViewModel : ViewModel() {
         postMain { status = "requesting..." }
         Thread {
             try {
+                // Trigger discovery on background thread before first use
+                postMain { status = "discovering_server..." }
+                val baseUrl = NetworkClient.baseUrl  // This triggers discovery if not cached
+                if (baseUrl == null) {
+                    postMain { status = "error: server not found" }
+                    return@Thread
+                }
+                
                 Log.d("AuthVM", "Requesting OTP for $phone")
                 val obj = JSONObject()
                 obj.put("phone", phone)
