@@ -3,7 +3,9 @@ const WebSocket = require('ws');
 const url = require('url');
 
 const PORT = 8080;
-const clients = new Map();
+const clients = new Map(); // clientId -> ws
+const userIds = new Map(); // clientId -> userId
+const userDisplayNames = new Map(); // clientId -> displayName
 const otpStore = new Map();
 
 const server = http.createServer((req, res) => {
@@ -80,18 +82,40 @@ const server = http.createServer((req, res) => {
 
 const wss = new WebSocket.Server({ server });
 
+// Expect token format: <userId>:<random>
+// Expect token format: <userId>:<displayName>:<random>
 wss.on('connection', (ws, req) => {
   const urlObj = url.parse(req.url, true);
   const token = urlObj.query.token;
-  
   if (!token) {
     ws.close(1008, 'No token');
     return;
   }
-
-  const clientId = token.substring(0, 8);
+  // Parse userId and displayName from token (assume format userId:displayName:random)
+  let userId = token;
+  let displayName = "";
+  if (token.includes(':')) {
+    const parts = token.split(':');
+    userId = parts[0];
+    displayName = parts.length > 1 ? parts[1] : "";
+  }
+  const clientId = userId;
   clients.set(clientId, ws);
-  console.log(`[WS] Connected: ${clientId}`);
+  userIds.set(clientId, userId);
+  userDisplayNames.set(clientId, displayName);
+  console.log(`[WS] Connected: ${clientId} (${displayName})`);
+
+  // Broadcast online user IDs and display names to all clients
+  function broadcastOnlineUsers() {
+    const online = Array.from(userIds.keys()).map(cid => ({ userId: userIds.get(cid), displayName: userDisplayNames.get(cid) }));
+    const msg = JSON.stringify({ type: 'online_users', users: online });
+    for (const wsClient of clients.values()) {
+      if (wsClient.readyState === WebSocket.OPEN) {
+        wsClient.send(msg);
+      }
+    }
+  }
+  broadcastOnlineUsers();
 
   ws.on('message', (msg) => {
     try {
@@ -116,6 +140,9 @@ wss.on('connection', (ws, req) => {
 
   ws.on('close', () => {
     clients.delete(clientId);
+    userIds.delete(clientId);
+    userDisplayNames.delete(clientId);
+    broadcastOnlineUsers();
     console.log(`[WS] Disconnected: ${clientId}`);
   });
 
