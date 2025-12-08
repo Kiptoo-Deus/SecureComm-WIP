@@ -1,2 +1,0 @@
-/usr/bin/ar qc libenhanced.a CMakeFiles/enhanced.dir/src/libsecurecomm/src/enhanced_dispatcher.cpp.o
-/usr/bin/ranlib libenhanced.a
