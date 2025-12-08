@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 package com.example.secure_carrier.ui.chat
 
 import android.content.Context
@@ -26,6 +27,10 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.example.secure_carrier.net.WebSocketManager
 import org.json.JSONObject
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.ExposedDropdownMenuDefaults
 
 @Composable
 fun ChatScreen(authViewModel: com.example.secure_carrier.ui.auth.AuthViewModel, navController: NavController) {
@@ -35,11 +40,32 @@ fun ChatScreen(authViewModel: com.example.secure_carrier.ui.auth.AuthViewModel, 
     var recipient by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
     val messages = remember { mutableStateListOf<String>() }
+    data class OnlineUser(val userId: String, val displayName: String)
+    val onlineUsers = remember { mutableStateListOf<OnlineUser>() }
+    var expanded by remember { mutableStateOf(false) }
 
     LaunchedEffect(token) {
         token?.let {
             WebSocketManager.connect(it) { msg ->
-                messages.add(msg)
+                try {
+                    val obj = JSONObject(msg)
+                    if (obj.optString("type") == "online_users") {
+                        onlineUsers.clear()
+                        val arr = obj.optJSONArray("users")
+                        if (arr != null) {
+                            for (i in 0 until arr.length()) {
+                                val userObj = arr.getJSONObject(i)
+                                val userId = userObj.optString("userId")
+                                val displayName = userObj.optString("displayName")
+                                onlineUsers.add(OnlineUser(userId, displayName))
+                            }
+                        }
+                    } else {
+                        messages.add(msg)
+                    }
+                } catch (e: Exception) {
+                    messages.add(msg)
+                }
             }
         }
     }
@@ -64,12 +90,34 @@ fun ChatScreen(authViewModel: com.example.secure_carrier.ui.auth.AuthViewModel, 
                 }
             }
         }
-        OutlinedTextField(
-            value = recipient,
-            onValueChange = { recipient = it },
-            label = { Text("Recipient ID") },
-            modifier = Modifier.fillMaxWidth()
-        )
+        Text("Online Users:", modifier = Modifier.align(Alignment.Start))
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = !expanded }
+        ) {
+            OutlinedTextField(
+                value = recipient,
+                onValueChange = { recipient = it },
+                label = { Text("Recipient ID") },
+                modifier = Modifier.fillMaxWidth(),
+                readOnly = false,
+                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) }
+            )
+            DropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                onlineUsers.forEach { user ->
+                    DropdownMenuItem(
+                        text = { Text("${user.displayName} (${user.userId})") },
+                        onClick = {
+                            recipient = user.userId
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
         OutlinedTextField(
             value = message,
             onValueChange = { message = it },
