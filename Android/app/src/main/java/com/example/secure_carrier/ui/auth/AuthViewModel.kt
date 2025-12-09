@@ -60,7 +60,7 @@ class AuthViewModel : ViewModel() {
         }.start()
     }
 
-    fun verifyOtp(onSuccess: (String, String) -> Unit) {
+    fun verifyOtp(context: android.content.Context, onSuccess: (String, String) -> Unit) {
         postMain { status = "verifying..." }
         Thread {
             try {
@@ -79,6 +79,11 @@ class AuthViewModel : ViewModel() {
                         token = t
                         status = "ok"
                         Log.d("AuthVM", "Auth success: $u")
+                        // Store user_id, auth_token, and display_name in SharedPreferences
+                        try {
+                            val prefs = context.getSharedPreferences("secure_carrier", android.content.Context.MODE_PRIVATE)
+                            prefs.edit().putString("user_id", u).putString("auth_token", t).putString("display_name", displayName).apply()
+                        } catch (_: Exception) {}
                         onSuccess(u, t)
                     }
                 } else {

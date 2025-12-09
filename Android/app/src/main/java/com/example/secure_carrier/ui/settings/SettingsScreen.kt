@@ -16,8 +16,25 @@ fun SettingsScreen(onThemeChange: (Boolean) -> Unit, isDarkTheme: Boolean) {
     val ctx = LocalContext.current
     var darkTheme by remember { mutableStateOf(isDarkTheme) }
 
+    var displayName by remember {
+        mutableStateOf(
+            ctx.getSharedPreferences("secure_carrier", Context.MODE_PRIVATE)
+                .getString("display_name", "") ?: ""
+        )
+    }
     Column(modifier = Modifier.padding(16.dp)) {
         Text("Settings", modifier = Modifier.padding(bottom = 16.dp))
+        Text("Display Name", modifier = Modifier.padding(top = 8.dp))
+        androidx.compose.material3.OutlinedTextField(
+            value = displayName,
+            onValueChange = {
+                displayName = it
+                ctx.getSharedPreferences("secure_carrier", Context.MODE_PRIVATE)
+                    .edit().putString("display_name", it).apply()
+            },
+            label = { Text("Display Name") },
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+        )
         Text("Dark Mode")
         Switch(
             checked = darkTheme,

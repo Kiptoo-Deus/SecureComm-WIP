@@ -17,6 +17,7 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -24,6 +25,14 @@ import androidx.navigation.NavController
 @Composable
 fun AuthScreen(viewModel: AuthViewModel, onAuthSuccess: () -> Unit, navController: NavController) {
     val ctx = LocalContext.current
+    // Autofill display name from SharedPreferences if available
+    val prefs = ctx.getSharedPreferences("secure_carrier", Context.MODE_PRIVATE)
+    LaunchedEffect(Unit) {
+        val storedName = prefs.getString("display_name", null)
+        if (!storedName.isNullOrBlank() && viewModel.displayName.isBlank()) {
+            viewModel.displayName = storedName
+        }
+    }
     Column(
         modifier = Modifier
             .padding(16.dp)
@@ -63,7 +72,7 @@ fun AuthScreen(viewModel: AuthViewModel, onAuthSuccess: () -> Unit, navControlle
         )
         Button(
             onClick = {
-                viewModel.verifyOtp { userId, token ->
+                viewModel.verifyOtp(ctx) { userId, token ->
                     saveAuth(ctx, userId, token)
                     onAuthSuccess()
                 }

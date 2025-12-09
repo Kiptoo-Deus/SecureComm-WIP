@@ -36,7 +36,17 @@ import androidx.compose.material3.ExposedDropdownMenuDefaults
 fun ChatScreen(authViewModel: com.example.secure_carrier.ui.auth.AuthViewModel, navController: NavController) {
     val ctx = LocalContext.current
     val prefs = ctx.getSharedPreferences("secure_carrier", Context.MODE_PRIVATE)
-    val token = prefs.getString("auth_token", null)
+    val userId = prefs.getString("user_id", null)
+    var displayName = prefs.getString("display_name", null)
+    if (displayName.isNullOrBlank()) {
+        // Generate a random display name: UserXXXX
+        val randomDigits = (1000..9999).random()
+        displayName = "User$randomDigits"
+        prefs.edit().putString("display_name", displayName).apply()
+    }
+    // Generate a random string for uniqueness (8 hex chars)
+    val random = (1..8).map { ('a'..'f') + ('0'..'9') }.flatten().shuffled().take(8).joinToString("")
+    val wsToken = if (userId != null && displayName != null) "$userId:$displayName:$random" else null
     var recipient by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
     val messages = remember { mutableStateListOf<String>() }
@@ -44,8 +54,8 @@ fun ChatScreen(authViewModel: com.example.secure_carrier.ui.auth.AuthViewModel, 
     val onlineUsers = remember { mutableStateListOf<OnlineUser>() }
     var expanded by remember { mutableStateOf(false) }
 
-    LaunchedEffect(token) {
-        token?.let {
+    LaunchedEffect(wsToken) {
+        wsToken?.let {
             WebSocketManager.connect(it) { msg ->
                 try {
                     val obj = JSONObject(msg)
